@@ -1,0 +1,32 @@
+name: ci
+
+# Playwright e2e is deliberately NOT part of CI: it needs the full platform
+# compose stack (Keycloak, registry, runtime, gateway) from the agentplane
+# repo. Run `npm run e2e` locally against `docker compose up`.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  checks:
+    name: lint + typecheck + test + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: install
+        run: npm ci
+      - name: lint
+        run: npm run lint
+      - name: typecheck
+        run: npm run typecheck
+      - name: test (vitest + RTL, MSW for HTTP)
+        run: npm run test
+      - name: build (production)
+        run: npm run build
