@@ -1,0 +1,16 @@
+:80 {
+	root * /srv
+	encode gzip
+
+	# Immutable, hashed assets get long-lived caching.
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+
+	# Runtime configuration must never be cached (SPEC §8).
+	@config path /config.json
+	header @config Cache-Control "no-store"
+
+	# SPA fallback.
+	try_files {path} /index.html
+	file_server
+}

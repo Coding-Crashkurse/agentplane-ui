@@ -1,0 +1,35 @@
+{
+  "oidc": {
+    "issuer": "http://localhost:8081/realms/agentplane",
+    "clientId": "agentplane-ui"
+  },
+  "registryUrl": "http://localhost:8080/registry",
+  "a2aBaseUrl": "http://localhost:8080",
+  "langfuseUrl": "http://localhost:3000",
+  "demoAuth": true,
+  "links": [
+    {
+      "id": "builder",
+      "name": "Agent Builder",
+      "description": "Build and deploy agent flows",
+      "icon": "workflow",
+      "url": "http://localhost:8090",
+      "roles": ["user", "admin"]
+    },
+    {
+      "id": "langfuse",
+      "name": "Observability",
+      "description": "Traces, evals & costs",
+      "icon": "activity",
+      "url": "http://localhost:3000",
+      "roles": ["admin"]
+    },
+    {
+      "id": "account",
+      "name": "Account",
+      "description": "Manage your profile and sessions",
+      "icon": "user",
+      "url": "http://localhost:8081/realms/agentplane/account"
+    }
+  ]
+}

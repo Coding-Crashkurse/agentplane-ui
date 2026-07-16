@@ -1,0 +1,9 @@
+node_modules
+dist
+CLAUDE.md
+SPEC.md
+coverage
+playwright-report
+test-results
+*.local
+.DS_Store

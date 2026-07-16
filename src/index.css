@@ -1,0 +1,48 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Design tokens, SPEC §6. Brand: navy + single cyan accent (the owner's site style). */
+@theme {
+  --color-background: #ffffff;
+  --color-surface: #f8fafc;
+  --color-card: #ffffff;
+  --color-border: #e5e7eb;
+  --color-ink: #0f172a;
+  --color-muted: #64748b;
+  /* accent: readable cyan for text/icons on the current background */
+  --color-accent: #0e7490;
+  --color-accent-hover: #155e75;
+  /* bright cyan for filled buttons (always dark text) */
+  --color-accent-bright: #22d3ee;
+  /* soft accent wash for icon boxes, active nav, selections */
+  --color-accent-soft: #ecfeff;
+  --radius-card: 12px;
+  --radius-control: 8px;
+}
+
+/* Dark mode: same tokens, dark values. Toggled via the .dark class on <html>. */
+.dark {
+  --color-background: #020617;
+  --color-surface: #0f172a;
+  --color-card: #0b1220;
+  --color-border: #1e293b;
+  --color-ink: #f1f5f9;
+  --color-muted: #94a3b8;
+  --color-accent: #22d3ee;
+  --color-accent-hover: #67e8f9;
+  --color-accent-soft: rgb(34 211 238 / 0.1);
+}
+
+@layer base {
+  body {
+    background-color: var(--color-background);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
