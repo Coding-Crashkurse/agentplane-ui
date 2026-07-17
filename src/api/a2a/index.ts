@@ -1,6 +1,8 @@
 export { A2AError } from './client';
-export type { A2AClient, OutgoingMessage } from './client';
+export type { A2AClient, OutgoingMessage, SendOptions } from './client';
 export { JsonRpcA2AClient } from './jsonRpcClient';
+export { TRACEPARENT_RE, newTraceparent } from './traceparent';
+export type { Traceparent } from './traceparent';
 export { FINAL_TASK_STATES, textFromParts } from './types';
 export type {
   AgentCard,

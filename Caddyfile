@@ -10,7 +10,22 @@
 	@config path /config.json
 	header @config Cache-Control "no-store"
 
+	# Same-origin proxy to the Keycloak Admin REST API (SPEC §11). The browser
+	# cannot call Keycloak's admin API cross-origin: its responses carry no
+	# Access-Control-Allow-Origin because the realm's clients omit the
+	# web-origins client scope, so access tokens have no allowed-origins claim
+	# (verified empirically 2026-07-17). Routing the admin API under our own
+	# origin sidesteps CORS. Point KC_ADMIN_UPSTREAM at the in-cluster Keycloak
+	# (e.g. http://keycloak:8080) and set config.json adminApiUrl to
+	# /kc-admin/admin/realms/{realm}. The dead default keeps Caddy booting when
+	# the var is unset; /kc-admin then returns 502 until it is configured.
+	handle_path /kc-admin/* {
+		reverse_proxy {$KC_ADMIN_UPSTREAM:localhost:9}
+	}
+
 	# SPA fallback.
-	try_files {path} /index.html
-	file_server
+	handle {
+		try_files {path} /index.html
+		file_server
+	}
 }

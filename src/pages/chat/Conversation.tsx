@@ -5,8 +5,9 @@ import type { RegistryEntry } from '../../api/registry/types';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { StatusBadge } from '../../components/StatusBadge';
-import { useConfig } from '../../config';
+import { useConfig, type AppConfig } from '../../config';
 import { cn } from '../../lib/cn';
+import { resolveTraceLink } from './traceLink';
 import type { ChatMessage } from './useChat';
 
 function TaskStateChip({ message }: { message: ChatMessage }) {
@@ -26,8 +27,13 @@ function TaskStateChip({ message }: { message: ChatMessage }) {
   );
 }
 
-function MessageBubble({ message, langfuseUrl }: { message: ChatMessage; langfuseUrl?: string }) {
+function MessageBubble({ message, config }: { message: ChatMessage; config: AppConfig }) {
   const isUser = message.role === 'user';
+  // Show a trace link once the response has finished streaming (completed or
+  // failed): traces are as useful on failure. The link lands on the exact trace
+  // only if the gateway/runtime propagated our traceparent (SPEC §12).
+  const traceLink =
+    !isUser && !message.streaming ? resolveTraceLink(config, message.traceId) : null;
   return (
     <div className={cn('flex flex-col gap-1', isUser ? 'items-end' : 'items-start')}>
       <div
@@ -47,14 +53,19 @@ function MessageBubble({ message, langfuseUrl }: { message: ChatMessage; langfus
       {!isUser && (
         <div className="flex items-center gap-3 px-1">
           <TaskStateChip message={message} />
-          {message.taskState === 'completed' && langfuseUrl && (
+          {traceLink && (
             <a
-              href={langfuseUrl}
+              href={traceLink.href}
               target="_blank"
               rel="noreferrer"
+              title={
+                traceLink.exact
+                  ? 'Opens this response in the tracing UI when the trace id was propagated end to end, otherwise the tracing home.'
+                  : 'Opens the tracing UI.'
+              }
               className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline"
             >
-              View traces in Langfuse
+              Trace
               <ExternalLink aria-hidden className="size-3" />
             </a>
           )}
@@ -126,7 +137,7 @@ export function Conversation({
         ) : (
           <div className="flex flex-col gap-4">
             {messages.map((message) => (
-              <MessageBubble key={message.id} message={message} langfuseUrl={config.langfuseUrl} />
+              <MessageBubble key={message.id} message={message} config={config} />
             ))}
           </div>
         )}

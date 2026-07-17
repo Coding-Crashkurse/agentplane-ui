@@ -1,7 +1,7 @@
 import { LogOut, Moon, Sun } from 'lucide-react';
 import { useAuth } from 'react-oidc-context';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router';
-import { useUsername } from '../../auth';
+import { useIsAdmin, useUsername } from '../../auth';
 import { Button } from '../../components/Button';
 import { Tag } from '../../components/Tag';
 import { useConfig } from '../../config';
@@ -9,17 +9,21 @@ import { cn } from '../../lib/cn';
 import { useTheme } from '../../theme/ThemeProvider';
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Launchpad' },
-  { to: '/chat', label: 'Chat' },
-  { to: '/registry', label: 'Registry' },
+  { to: '/', label: 'Launchpad', adminOnly: false },
+  { to: '/chat', label: 'Chat', adminOnly: false },
+  { to: '/registry', label: 'Registry', adminOnly: false },
+  { to: '/admin/users', label: 'Users', adminOnly: true },
 ];
 
 export function AppShell() {
   useAuth();
   const config = useConfig();
   const username = useUsername();
+  const isAdmin = useIsAdmin();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+
+  const navItems = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
 
   return (
     <div className="min-h-screen bg-background">
@@ -29,7 +33,7 @@ export function AppShell() {
             agent<span className="text-accent">plane</span>
           </Link>
           <nav aria-label="Main" className="flex items-center gap-1">
-            {NAV_ITEMS.map((item) => (
+            {navItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}

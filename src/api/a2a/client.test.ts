@@ -5,6 +5,7 @@ import { sseResponse } from '../../test/handlers';
 import { echoStreamFrames, sseBody, sseErrorBody } from './__fixtures__/stream';
 import { A2AError } from './client';
 import { JsonRpcA2AClient } from './jsonRpcClient';
+import { TRACEPARENT_RE } from './traceparent';
 import type { StreamEvent } from './types';
 
 const AGENT_URL = 'https://api.test/a2a/echo';
@@ -17,12 +18,14 @@ async function collect(stream: AsyncGenerator<StreamEvent>): Promise<StreamEvent
 }
 
 describe('JsonRpcA2AClient', () => {
-  it('streams events in order and sends the A2A-Version header', async () => {
+  it('streams events in order and sends the A2A-Version and traceparent headers', async () => {
     let version: string | null = null;
+    let traceparent: string | null = null;
     let method: string | undefined;
     server.use(
       http.post(AGENT_URL, async ({ request }) => {
         version = request.headers.get('A2A-Version');
+        traceparent = request.headers.get('traceparent');
         method = ((await request.json()) as { method: string }).method;
         return sseResponse(sseBody(echoStreamFrames(['Hello', ' world'])));
       }),
@@ -31,6 +34,8 @@ describe('JsonRpcA2AClient', () => {
     const events = await collect(client.streamMessage(AGENT_URL, { text: 'ping' }));
 
     expect(version).toBe('1.0');
+    // A traceparent is always attached, even when the caller passes none.
+    expect(traceparent).toMatch(TRACEPARENT_RE);
     expect(method).toBe('message/stream');
     expect(events.map((event) => event.kind)).toEqual([
       'task',
@@ -45,6 +50,19 @@ describe('JsonRpcA2AClient', () => {
     expect(texts).toEqual(['Hello', ' world']);
     const last = events.at(-1);
     expect(last?.kind === 'status-update' && last.status.state).toBe('completed');
+  });
+
+  it('sends a caller-supplied traceparent verbatim so the UI trace id matches the wire', async () => {
+    let traceparent: string | null = null;
+    server.use(
+      http.post(AGENT_URL, ({ request }) => {
+        traceparent = request.headers.get('traceparent');
+        return sseResponse(sseBody(echoStreamFrames(['ok'])));
+      }),
+    );
+    const supplied = '00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01';
+    await collect(client.streamMessage(AGENT_URL, { text: 'ping' }, { traceparent: supplied }));
+    expect(traceparent).toBe(supplied);
   });
 
   it('throws the JSON-RPC error message verbatim', async () => {

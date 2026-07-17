@@ -1,7 +1,8 @@
 import type { FetchLike } from '../../auth/authorizedFetch';
 import { randomId } from '../../lib/randomId';
-import { A2AError, type A2AClient, type OutgoingMessage } from './client';
+import { A2AError, type A2AClient, type OutgoingMessage, type SendOptions } from './client';
 import { parseSse } from './sse';
+import { newTraceparent } from './traceparent';
 import type { AgentCard, A2AMessage, StreamEvent, Task } from './types';
 
 interface JsonRpcError {
@@ -58,14 +59,18 @@ export class JsonRpcA2AClient implements A2AClient {
     method: string,
     message: A2AMessage,
     accept: string,
-    signal?: AbortSignal,
+    options?: SendOptions,
   ): Promise<Response> {
+    // Every A2A request carries a W3C traceparent (SPEC §12); the caller may
+    // pass its own to keep the trace id, otherwise one is generated here.
+    const traceparent = options?.traceparent ?? newTraceparent().header;
     return this.fetchFn(agentUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Accept: accept,
         'A2A-Version': A2A_VERSION,
+        traceparent,
       },
       body: JSON.stringify({
         jsonrpc: '2.0',
@@ -73,16 +78,21 @@ export class JsonRpcA2AClient implements A2AClient {
         method,
         params: { message },
       }),
-      signal,
+      signal: options?.signal,
     });
   }
 
-  async sendMessage(agentUrl: string, outgoing: OutgoingMessage): Promise<Task | A2AMessage> {
+  async sendMessage(
+    agentUrl: string,
+    outgoing: OutgoingMessage,
+    options?: SendOptions,
+  ): Promise<Task | A2AMessage> {
     const response = await this.post(
       agentUrl,
       'message/send',
       buildMessage(outgoing),
       'application/json',
+      options,
     );
     if (!response.ok) throw await this.httpError(response);
     const body = (await response.json()) as JsonRpcResponse;
@@ -92,14 +102,14 @@ export class JsonRpcA2AClient implements A2AClient {
   async *streamMessage(
     agentUrl: string,
     outgoing: OutgoingMessage,
-    signal?: AbortSignal,
+    options?: SendOptions,
   ): AsyncGenerator<StreamEvent, void, undefined> {
     const response = await this.post(
       agentUrl,
       'message/stream',
       buildMessage(outgoing),
       'text/event-stream',
-      signal,
+      options,
     );
     if (!response.ok) throw await this.httpError(response);
     if (!response.body) throw new A2AError('The agent returned no response body.');

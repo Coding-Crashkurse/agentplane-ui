@@ -6,7 +6,7 @@ import { sseErrorBody } from '../../api/a2a/__fixtures__/stream';
 import { entriesPage } from '../../api/registry/__fixtures__/entries';
 import { ECHO_AGENT_URL, REGISTRY_URL, sseResponse } from '../../test/handlers';
 import { server } from '../../test/server';
-import { renderWithProviders } from '../../test/utils';
+import { renderWithProviders, testConfig } from '../../test/utils';
 import { ChatPage } from './ChatPage';
 
 async function pickEchoAgent(user: ReturnType<typeof userEvent.setup>) {
@@ -29,10 +29,30 @@ describe('ChatPage', () => {
     );
     // Task state transitions end in "completed" (submitted → working → completed).
     await waitFor(() => expect(screen.getByTestId('task-state')).toHaveTextContent('completed'));
-    // Completed exchanges link to Langfuse when configured.
-    expect(screen.getByRole('link', { name: /langfuse/i })).toHaveAttribute(
+    // Finished exchanges expose a trace link; with only langfuseUrl configured
+    // (no traceUrlTemplate) it falls back to the tracing UI root (SPEC §12).
+    expect(screen.getByRole('link', { name: /trace/i })).toHaveAttribute(
       'href',
       'https://langfuse.test',
+    );
+  });
+
+  it('builds an exact trace deep link from traceUrlTemplate carrying the sent trace id', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<ChatPage />, {
+      config: { ...testConfig, traceUrlTemplate: 'https://langfuse.test/traces/{traceId}' },
+    });
+    await user.click(await screen.findByRole('button', { name: /echo agent/i }));
+
+    await user.type(screen.getByLabelText('Message'), 'ping');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    await waitFor(() => expect(screen.getByTestId('task-state')).toHaveTextContent('completed'));
+    const link = screen.getByRole('link', { name: /trace/i });
+    // The link targets the specific trace id, not the tracing UI root.
+    expect(link).toHaveAttribute(
+      'href',
+      expect.stringMatching(/^https:\/\/langfuse\.test\/traces\/[0-9a-f]{32}$/),
     );
   });
 

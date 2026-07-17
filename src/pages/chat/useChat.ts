@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { JsonRpcA2AClient, textFromParts, type TaskState } from '../../api/a2a';
+import { JsonRpcA2AClient, newTraceparent, textFromParts, type TaskState } from '../../api/a2a';
 import type { RegistryEntry } from '../../api/registry/types';
 import { useAuthorizedFetch } from '../../auth';
 import { randomId } from '../../lib/randomId';
@@ -11,6 +11,8 @@ export interface ChatMessage {
   taskState?: TaskState;
   /** A2A error message, shown verbatim (SPEC §4.2). */
   error?: string;
+  /** W3C trace id sent with this exchange, used to build a trace deep link (SPEC §12). */
+  traceId?: string;
   streaming: boolean;
 }
 
@@ -35,10 +37,13 @@ export function useChat(agent: RegistryEntry | null) {
     async (text: string) => {
       if (!agent || isStreaming || !text.trim()) return;
       const agentMessageId = randomId();
+      // Generate the traceparent up front so the assistant message keeps its
+      // trace id for the deep link, and the same id is sent on the wire.
+      const { header: traceparent, traceId } = newTraceparent();
       setMessages((current) => [
         ...current,
         { id: randomId(), role: 'user', text, streaming: false },
-        { id: agentMessageId, role: 'agent', text: '', streaming: true },
+        { id: agentMessageId, role: 'agent', text: '', traceId, streaming: true },
       ]);
       setIsStreaming(true);
 
@@ -48,10 +53,11 @@ export function useChat(agent: RegistryEntry | null) {
         );
 
       try {
-        const stream = client.streamMessage(agent.url, {
-          text,
-          contextId: contextIdRef.current,
-        });
+        const stream = client.streamMessage(
+          agent.url,
+          { text, contextId: contextIdRef.current },
+          { traceparent },
+        );
         for await (const event of stream) {
           switch (event.kind) {
             case 'task':

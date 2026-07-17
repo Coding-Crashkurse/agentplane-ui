@@ -3,7 +3,7 @@ import { InMemoryWebStorage, WebStorageStateStore } from 'oidc-client-ts';
 import { useState, type ReactNode } from 'react';
 import { AuthProvider, type AuthProviderProps } from 'react-oidc-context';
 import { BrowserRouter, Route, Routes } from 'react-router';
-import { RequireAuth } from './auth';
+import { RequireAdmin, RequireAuth } from './auth';
 import { DemoAuthProvider } from './auth/DemoAuthProvider';
 import { ToastProvider } from './components/Toast';
 import { ConfigContext, type AppConfig } from './config';
@@ -12,6 +12,7 @@ import { CallbackPage } from './pages/auth/CallbackPage';
 import { LogoutPage } from './pages/auth/LogoutPage';
 import { ChatPage } from './pages/chat/ChatPage';
 import { LaunchpadPage } from './pages/launchpad/LaunchpadPage';
+import { UsersPage } from './pages/admin/UsersPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { RegistryPage } from './pages/registry/RegistryPage';
 import { AppShell } from './pages/shell/AppShell';
@@ -69,6 +70,14 @@ export function App({ config }: { config: AppConfig }) {
                     <Route index element={<LaunchpadPage />} />
                     <Route path="chat" element={<ChatPage />} />
                     <Route path="registry" element={<RegistryPage />} />
+                    <Route
+                      path="admin/users"
+                      element={
+                        <RequireAdmin>
+                          <UsersPage />
+                        </RequireAdmin>
+                      }
+                    />
                   </Route>
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>

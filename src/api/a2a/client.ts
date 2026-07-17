@@ -6,6 +6,15 @@ export interface OutgoingMessage {
   contextId?: string;
 }
 
+export interface SendOptions {
+  signal?: AbortSignal;
+  /**
+   * W3C `traceparent` header to send with this request (SPEC §12). When omitted
+   * the client generates one so every A2A request is always traceable.
+   */
+  traceparent?: string;
+}
+
 export class A2AError extends Error {
   constructor(
     message: string,
@@ -21,10 +30,14 @@ export class A2AError extends Error {
  */
 export interface A2AClient {
   fetchAgentCard(agentUrl: string): Promise<AgentCard>;
-  sendMessage(agentUrl: string, message: OutgoingMessage): Promise<Task | A2AMessage>;
+  sendMessage(
+    agentUrl: string,
+    message: OutgoingMessage,
+    options?: SendOptions,
+  ): Promise<Task | A2AMessage>;
   streamMessage(
     agentUrl: string,
     message: OutgoingMessage,
-    signal?: AbortSignal,
+    options?: SendOptions,
   ): AsyncGenerator<StreamEvent, void, undefined>;
 }
