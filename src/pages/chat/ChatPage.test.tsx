@@ -1,6 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
+import { Route, Routes } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import { sseErrorBody } from '../../api/a2a/__fixtures__/stream';
 import { entriesPage } from '../../api/registry/__fixtures__/entries';
@@ -9,17 +10,32 @@ import { server } from '../../test/server';
 import { makeAuth, renderWithProviders, testConfig } from '../../test/utils';
 import { ChatPage } from './ChatPage';
 
+/** The page reads the selected agent from /chat/:agentId (real route shape). */
+function renderChat(options?: Parameters<typeof renderWithProviders>[1]) {
+  return renderWithProviders(
+    <Routes>
+      <Route path="/chat/:agentId?" element={<ChatPage />} />
+    </Routes>,
+    { route: '/chat', ...options },
+  );
+}
+
 async function pickEchoAgent(
   user: ReturnType<typeof userEvent.setup>,
   options?: Parameters<typeof renderWithProviders>[1],
 ) {
-  renderWithProviders(<ChatPage />, options);
+  renderChat(options);
   await user.click(await screen.findByRole('button', { name: /echo agent/i }));
 }
 
 const admin = { auth: makeAuth({ roles: ['user', 'admin'] }) };
 
 describe('ChatPage', () => {
+  it('restores the selected agent from the URL (deep link, survives reloads)', async () => {
+    renderChat({ route: '/chat/echo-1' });
+    expect(await screen.findByRole('heading', { name: 'Echo Agent' })).toBeInTheDocument();
+  });
+
   it('streams the reply tokens in order and shows the final task state', async () => {
     const user = userEvent.setup();
     await pickEchoAgent(user, admin);
@@ -91,7 +107,7 @@ describe('ChatPage', () => {
       ),
     );
     const user = userEvent.setup();
-    renderWithProviders(<ChatPage />);
+    renderChat();
 
     // capabilities fixture reports semantic_search: true → toggle is visible.
     expect(await screen.findByLabelText('Semantic')).toBeInTheDocument();

@@ -70,7 +70,7 @@ export function App({ config }: { config: AppConfig }) {
                     }
                   >
                     <Route index element={<LaunchpadPage />} />
-                    <Route path="chat" element={<ChatPage />} />
+                    <Route path="chat/:agentId?" element={<ChatPage />} />
                     <Route path="registry" element={<RegistryPage />} />
                     <Route
                       path="admin/users"

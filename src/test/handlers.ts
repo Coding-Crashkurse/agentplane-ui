@@ -23,6 +23,12 @@ export const defaultHandlers = [
     );
     return HttpResponse.json({ ...entriesPage, items, total: items.length });
   }),
+  http.get(`${REGISTRY_URL}/agents/:id`, ({ params }) => {
+    const entry = entriesPage.items.find((candidate) => candidate.id === params['id']);
+    return entry
+      ? HttpResponse.json(entry)
+      : HttpResponse.json({ detail: 'entry not found' }, { status: 404 });
+  }),
   http.get(`${REGISTRY_URL}/agents/:id/history`, () =>
     HttpResponse.json({
       items: [{ status: 'healthy', at: '2026-07-12T09:00:00Z' }],
