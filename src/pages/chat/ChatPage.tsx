@@ -25,7 +25,7 @@ export function ChatPage() {
     enabled: agentId !== undefined,
   });
   const selected = data ?? null;
-  const { messages, isStreaming, send } = useChat(selected);
+  const { messages, isStreaming, send, newChat } = useChat(selected);
 
   return (
     <div className="mx-auto flex h-[calc(100vh-3.5rem)] max-w-6xl">
@@ -41,6 +41,7 @@ export function ChatPage() {
           messages={messages}
           isStreaming={isStreaming}
           onSend={(text) => void send(text)}
+          onNewChat={newChat}
         />
       </section>
     </div>

@@ -15,12 +15,13 @@ export function useRegistryClient(): RegistryClient {
 }
 
 /** Lists entries; routes through /agents/search when a query is present. */
-export function useEntries(params: ListParams) {
+export function useEntries(params: ListParams, options?: { refetchInterval?: number }) {
   const client = useRegistryClient();
   return useQuery({
     queryKey: ['entries', params],
     queryFn: () => (params.q ? client.search(params) : client.list(params)),
     placeholderData: keepPreviousData,
+    refetchInterval: options?.refetchInterval,
   });
 }
 

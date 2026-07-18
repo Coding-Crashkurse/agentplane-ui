@@ -36,7 +36,7 @@ describe('ChatPage', () => {
     expect(await screen.findByRole('heading', { name: 'Echo Agent' })).toBeInTheDocument();
   });
 
-  it('restores the persisted conversation via ListTasks on selection', async () => {
+  it('restores only the latest conversation and starts fresh via "New chat"', async () => {
     server.use(
       http.post(ECHO_AGENT_URL, async ({ request }) => {
         const { method } = (await request.json()) as { method?: string };
@@ -45,6 +45,7 @@ describe('ChatPage', () => {
           jsonrpc: '2.0',
           id: 1,
           result: {
+            // Newest first: task-9 is the current conversation, task-1 an older one.
             tasks: [
               {
                 id: 'task-9',
@@ -54,6 +55,15 @@ describe('ChatPage', () => {
                   { messageId: 'u1', role: 'ROLE_USER', parts: [{ text: 'earlier question' }] },
                 ],
                 artifacts: [{ artifactId: 'a1', name: 'output', parts: [{ text: 'earlier answer' }] }],
+              },
+              {
+                id: 'task-1',
+                contextId: 'ctx-old',
+                status: { state: 'TASK_STATE_COMPLETED' },
+                history: [
+                  { messageId: 'u0', role: 'ROLE_USER', parts: [{ text: 'ancient question' }] },
+                ],
+                artifacts: [{ artifactId: 'a0', name: 'output', parts: [{ text: 'ancient answer' }] }],
               },
             ],
           },
@@ -65,6 +75,12 @@ describe('ChatPage', () => {
 
     expect(await screen.findByText('earlier question')).toBeInTheDocument();
     expect(screen.getByText('earlier answer')).toBeInTheDocument();
+    // Older contexts are not flattened into the view.
+    expect(screen.queryByText('ancient question')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /new chat/i }));
+    expect(screen.queryByText('earlier question')).not.toBeInTheDocument();
+    expect(screen.getByText(/no messages yet/i)).toBeInTheDocument();
   });
 
   it('streams the reply tokens in order and shows the final task state', async () => {

@@ -104,16 +104,21 @@ export function RegistryPage() {
     setPage(1);
   }, [debouncedQuery, tags, kind, status, enabledFilter, allOwners]);
 
-  const { data, isPending, isError, error, refetch } = useEntries({
-    q: debouncedQuery || undefined,
-    tags: tags.length > 0 ? tags : undefined,
-    kind: kind || undefined,
-    status: status || undefined,
-    enabled: enabledFilter ? enabledFilter === 'enabled' : undefined,
-    owner: allOwners ? 'all' : undefined,
-    page,
-    page_size: PAGE_SIZE,
-  });
+  const { data, isPending, isError, error, refetch } = useEntries(
+    {
+      q: debouncedQuery || undefined,
+      tags: tags.length > 0 ? tags : undefined,
+      kind: kind || undefined,
+      status: status || undefined,
+      enabled: enabledFilter ? enabledFilter === 'enabled' : undefined,
+      owner: allOwners ? 'all' : undefined,
+      page,
+      page_size: PAGE_SIZE,
+    },
+    // Health states change server-side (starting -> healthy); poll so the
+    // table reflects them without a manual reload.
+    { refetchInterval: 10_000 },
+  );
 
   const totalPages = data ? Math.max(1, Math.ceil(data.data.total / PAGE_SIZE)) : 1;
 

@@ -72,8 +72,12 @@ export function useChat(agent: RegistryEntry | null) {
       try {
         const tasks = await client.listTasks(agentUrl);
         if (cancelled || tasks.length === 0) return;
-        const ordered = [...tasks].reverse(); // server lists newest first
-        contextIdRef.current = ordered.at(-1)?.contextId;
+        // Restore only the most recent conversation (tasks are listed newest
+        // first): older contexts stay in the store but are not flattened into
+        // the view, and a "new chat" cut survives reloads.
+        const latestContext = tasks[0]?.contextId;
+        const ordered = tasks.filter((task) => task.contextId === latestContext).reverse();
+        contextIdRef.current = latestContext;
         setMessages(ordered.flatMap(taskToMessages));
       } catch {
         /* restore is best-effort */
@@ -83,6 +87,14 @@ export function useChat(agent: RegistryEntry | null) {
       cancelled = true;
     };
   }, [agentUrl, client]);
+
+  // A new chat is purely a client-side cut: the next message is sent without
+  // a contextId, so the server opens a fresh A2A context. Prior conversations
+  // stay in the task store.
+  const newChat = useCallback(() => {
+    setMessages([]);
+    contextIdRef.current = undefined;
+  }, []);
 
   const send = useCallback(
     async (text: string) => {
@@ -154,5 +166,5 @@ export function useChat(agent: RegistryEntry | null) {
     [agent, client, isStreaming],
   );
 
-  return { messages, isStreaming, send };
+  return { messages, isStreaming, send, newChat };
 }

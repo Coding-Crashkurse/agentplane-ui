@@ -1,4 +1,4 @@
-import { ExternalLink, MessageSquare, SendHorizonal } from 'lucide-react';
+import { ExternalLink, MessageSquare, MessageSquarePlus, SendHorizonal } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { FINAL_TASK_STATES } from '../../api/a2a';
 import { useIsAdmin } from '../../auth';
@@ -99,11 +99,13 @@ export function Conversation({
   messages,
   isStreaming,
   onSend,
+  onNewChat,
 }: {
   agent: RegistryEntry | null;
   messages: ChatMessage[];
   isStreaming: boolean;
   onSend: (text: string) => void;
+  onNewChat: () => void;
 }) {
   const config = useConfig();
   const isAdmin = useIsAdmin();
@@ -137,6 +139,17 @@ export function Conversation({
       <div className="flex items-center gap-3 border-b border-border px-5 py-3">
         <h2 className="text-base font-semibold text-ink">{entryName(agent)}</h2>
         <StatusBadge status={agent.status} lastSeen={agent.last_seen} />
+        <div className="ml-auto">
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={isStreaming || messages.length === 0}
+            onClick={onNewChat}
+          >
+            <MessageSquarePlus aria-hidden className="size-4" />
+            New chat
+          </Button>
+        </div>
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4">
