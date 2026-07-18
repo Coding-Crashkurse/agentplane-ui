@@ -1,30 +1,33 @@
 /**
- * A2A SSE stream fixture (v1.0 JSON-RPC binding): used by the MSW handlers
- * to test token render order and task-state transitions (CLAUDE.md testing rules).
+ * A2A SSE stream fixture (v1.0 JSON-RPC binding, proto-JSON wire format):
+ * used by the MSW handlers to test token render order and task-state
+ * transitions (CLAUDE.md testing rules). Frames mirror what a2a-sdk 1.1
+ * emits: one-of StreamResponse wrappers with enum value names.
  */
-import type { StreamEvent } from '../types';
+import type { WireStreamResponse } from '../wire';
 
 export function echoStreamFrames(
   reply: string[],
   taskId = 'task-1',
   contextId = 'ctx-1',
-): StreamEvent[] {
+): WireStreamResponse[] {
   return [
-    { kind: 'task', id: taskId, contextId, status: { state: 'submitted' } },
-    { kind: 'status-update', taskId, contextId, status: { state: 'working' }, final: false },
-    ...reply.map<StreamEvent>((text, index) => ({
-      kind: 'message',
-      role: 'agent',
-      parts: [{ kind: 'text', text }],
-      messageId: `m-${index}`,
-      taskId,
-      contextId,
+    { task: { id: taskId, contextId, status: { state: 'TASK_STATE_SUBMITTED' } } },
+    { statusUpdate: { taskId, contextId, status: { state: 'TASK_STATE_WORKING' } } },
+    ...reply.map<WireStreamResponse>((text, index) => ({
+      message: {
+        messageId: `m-${index}`,
+        taskId,
+        contextId,
+        role: 'ROLE_AGENT',
+        parts: [{ text }],
+      },
     })),
-    { kind: 'status-update', taskId, contextId, status: { state: 'completed' }, final: true },
+    { statusUpdate: { taskId, contextId, status: { state: 'TASK_STATE_COMPLETED' } } },
   ];
 }
 
-export function sseBody(frames: StreamEvent[]): string {
+export function sseBody(frames: WireStreamResponse[]): string {
   return frames
     .map((frame) => `data: ${JSON.stringify({ jsonrpc: '2.0', id: 1, result: frame })}\n\n`)
     .join('');

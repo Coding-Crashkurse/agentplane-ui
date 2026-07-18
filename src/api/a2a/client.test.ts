@@ -36,7 +36,7 @@ describe('JsonRpcA2AClient', () => {
     expect(version).toBe('1.0');
     // A traceparent is always attached, even when the caller passes none.
     expect(traceparent).toMatch(TRACEPARENT_RE);
-    expect(method).toBe('message/stream');
+    expect(method).toBe('SendStreamingMessage');
     expect(events.map((event) => event.kind)).toEqual([
       'task',
       'status-update',

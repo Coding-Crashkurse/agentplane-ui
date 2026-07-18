@@ -4,6 +4,14 @@ import { A2AError, type A2AClient, type OutgoingMessage, type SendOptions } from
 import { parseSse } from './sse';
 import { newTraceparent } from './traceparent';
 import type { AgentCard, A2AMessage, StreamEvent, Task } from './types';
+import {
+  messageToWire,
+  streamEventFromWire,
+  taskOrMessageFromWire,
+  type WireMessage,
+  type WireSendMessageResponse,
+  type WireStreamResponse,
+} from './wire';
 
 interface JsonRpcError {
   code: number;
@@ -20,15 +28,12 @@ interface JsonRpcResponse {
 
 const A2A_VERSION = '1.0';
 
-function buildMessage(outgoing: OutgoingMessage): A2AMessage {
-  return {
-    kind: 'message',
-    role: 'user',
-    parts: [{ kind: 'text', text: outgoing.text }],
+function buildMessage(outgoing: OutgoingMessage): WireMessage {
+  return messageToWire(outgoing.text, {
     messageId: randomId(),
     taskId: outgoing.taskId,
     contextId: outgoing.contextId,
-  };
+  });
 }
 
 function unwrap(response: JsonRpcResponse): unknown {
@@ -57,7 +62,7 @@ export class JsonRpcA2AClient implements A2AClient {
   private async post(
     agentUrl: string,
     method: string,
-    message: A2AMessage,
+    message: WireMessage,
     accept: string,
     options?: SendOptions,
   ): Promise<Response> {
@@ -89,14 +94,16 @@ export class JsonRpcA2AClient implements A2AClient {
   ): Promise<Task | A2AMessage> {
     const response = await this.post(
       agentUrl,
-      'message/send',
+      'SendMessage',
       buildMessage(outgoing),
       'application/json',
       options,
     );
     if (!response.ok) throw await this.httpError(response);
     const body = (await response.json()) as JsonRpcResponse;
-    return unwrap(body) as Task | A2AMessage;
+    const result = taskOrMessageFromWire(unwrap(body) as WireSendMessageResponse);
+    if (!result) throw new A2AError('The agent returned neither a task nor a message.');
+    return result;
   }
 
   async *streamMessage(
@@ -106,7 +113,7 @@ export class JsonRpcA2AClient implements A2AClient {
   ): AsyncGenerator<StreamEvent, void, undefined> {
     const response = await this.post(
       agentUrl,
-      'message/stream',
+      'SendStreamingMessage',
       buildMessage(outgoing),
       'text/event-stream',
       options,
@@ -116,7 +123,8 @@ export class JsonRpcA2AClient implements A2AClient {
 
     for await (const data of parseSse(response.body)) {
       const parsed = JSON.parse(data) as JsonRpcResponse;
-      yield unwrap(parsed) as StreamEvent;
+      const event = streamEventFromWire(unwrap(parsed) as WireStreamResponse);
+      if (event) yield event;
     }
   }
 
