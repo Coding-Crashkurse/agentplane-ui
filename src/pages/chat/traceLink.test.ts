@@ -12,7 +12,15 @@ describe('resolveTraceLink', () => {
       },
       TRACE_ID,
     );
-    expect(link).toEqual({ href: `https://langfuse.test/traces/${TRACE_ID}`, exact: true });
+    // Routed through the sign-in page so a missing session shows a login
+    // (landing on the trace afterwards) instead of Langfuse's misleading
+    // "no access to this trace" error.
+    expect(link).toEqual({
+      href: `https://langfuse.test/auth/sign-in?targetPath=${encodeURIComponent(
+        `/traces/${TRACE_ID}`,
+      )}`,
+      exact: true,
+    });
   });
 
   it('substitutes every {traceId} occurrence in the template', () => {
@@ -20,7 +28,11 @@ describe('resolveTraceLink', () => {
       { traceUrlTemplate: 'https://t.test/{traceId}?highlight={traceId}' },
       TRACE_ID,
     );
-    expect(link?.href).toBe(`https://t.test/${TRACE_ID}?highlight=${TRACE_ID}`);
+    expect(link?.href).toBe(
+      `https://t.test/auth/sign-in?targetPath=${encodeURIComponent(
+        `/${TRACE_ID}?highlight=${TRACE_ID}`,
+      )}`,
+    );
   });
 
   it('falls back to a plain langfuseUrl link when no template is set', () => {

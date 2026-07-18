@@ -104,7 +104,9 @@ describe('ChatPage', () => {
     // The link targets the specific trace id, not the tracing UI root.
     expect(link).toHaveAttribute(
       'href',
-      expect.stringMatching(/^https:\/\/langfuse\.test\/traces\/[0-9a-f]{32}$/),
+      expect.stringMatching(
+        /^https:\/\/langfuse\.test\/auth\/sign-in\?targetPath=%2Ftraces%2F[0-9a-f]{32}$/,
+      ),
     );
   });
 
