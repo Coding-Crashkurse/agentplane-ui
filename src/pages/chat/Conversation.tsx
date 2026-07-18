@@ -1,6 +1,7 @@
 import { ExternalLink, MessageSquare, SendHorizonal } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { FINAL_TASK_STATES } from '../../api/a2a';
+import { useIsAdmin } from '../../auth';
 import type { RegistryEntry } from '../../api/registry/types';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
@@ -27,13 +28,23 @@ function TaskStateChip({ message }: { message: ChatMessage }) {
   );
 }
 
-function MessageBubble({ message, config }: { message: ChatMessage; config: AppConfig }) {
+function MessageBubble({
+  message,
+  config,
+  showTrace,
+}: {
+  message: ChatMessage;
+  config: AppConfig;
+  showTrace: boolean;
+}) {
   const isUser = message.role === 'user';
   // Show a trace link once the response has finished streaming (completed or
   // failed): traces are as useful on failure. The link lands on the exact trace
-  // only if the gateway/runtime propagated our traceparent (SPEC §12).
+  // only if the gateway/runtime propagated our traceparent (SPEC §12). Traces
+  // live in the tracing backend, which is admin-only (project-scoped, not
+  // per-user); non-admins never get the link.
   const traceLink =
-    !isUser && !message.streaming ? resolveTraceLink(config, message.traceId) : null;
+    showTrace && !isUser && !message.streaming ? resolveTraceLink(config, message.traceId) : null;
   return (
     <div className={cn('flex flex-col gap-1', isUser ? 'items-end' : 'items-start')}>
       <div
@@ -95,6 +106,7 @@ export function Conversation({
   onSend: (text: string) => void;
 }) {
   const config = useConfig();
+  const isAdmin = useIsAdmin();
   const [draft, setDraft] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -137,7 +149,12 @@ export function Conversation({
         ) : (
           <div className="flex flex-col gap-4">
             {messages.map((message) => (
-              <MessageBubble key={message.id} message={message} config={config} />
+              <MessageBubble
+                key={message.id}
+                message={message}
+                config={config}
+                showTrace={isAdmin}
+              />
             ))}
           </div>
         )}

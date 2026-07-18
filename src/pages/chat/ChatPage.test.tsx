@@ -6,18 +6,23 @@ import { sseErrorBody } from '../../api/a2a/__fixtures__/stream';
 import { entriesPage } from '../../api/registry/__fixtures__/entries';
 import { ECHO_AGENT_URL, REGISTRY_URL, sseResponse } from '../../test/handlers';
 import { server } from '../../test/server';
-import { renderWithProviders, testConfig } from '../../test/utils';
+import { makeAuth, renderWithProviders, testConfig } from '../../test/utils';
 import { ChatPage } from './ChatPage';
 
-async function pickEchoAgent(user: ReturnType<typeof userEvent.setup>) {
-  renderWithProviders(<ChatPage />);
+async function pickEchoAgent(
+  user: ReturnType<typeof userEvent.setup>,
+  options?: Parameters<typeof renderWithProviders>[1],
+) {
+  renderWithProviders(<ChatPage />, options);
   await user.click(await screen.findByRole('button', { name: /echo agent/i }));
 }
+
+const admin = { auth: makeAuth({ roles: ['user', 'admin'] }) };
 
 describe('ChatPage', () => {
   it('streams the reply tokens in order and shows the final task state', async () => {
     const user = userEvent.setup();
-    await pickEchoAgent(user);
+    await pickEchoAgent(user, admin);
 
     await user.type(screen.getByLabelText('Message'), 'ping');
     await user.click(screen.getByRole('button', { name: 'Send' }));
@@ -29,8 +34,8 @@ describe('ChatPage', () => {
     );
     // Task state transitions end in "completed" (submitted → working → completed).
     await waitFor(() => expect(screen.getByTestId('task-state')).toHaveTextContent('completed'));
-    // Finished exchanges expose a trace link; with only langfuseUrl configured
-    // (no traceUrlTemplate) it falls back to the tracing UI root (SPEC §12).
+    // Finished exchanges expose a trace link to admins; with only langfuseUrl
+    // configured (no traceUrlTemplate) it falls back to the tracing UI root (§12).
     expect(screen.getByRole('link', { name: /trace/i })).toHaveAttribute(
       'href',
       'https://langfuse.test',
@@ -39,10 +44,10 @@ describe('ChatPage', () => {
 
   it('builds an exact trace deep link from traceUrlTemplate carrying the sent trace id', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<ChatPage />, {
+    await pickEchoAgent(user, {
+      ...admin,
       config: { ...testConfig, traceUrlTemplate: 'https://langfuse.test/traces/{traceId}' },
     });
-    await user.click(await screen.findByRole('button', { name: /echo agent/i }));
 
     await user.type(screen.getByLabelText('Message'), 'ping');
     await user.click(screen.getByRole('button', { name: 'Send' }));
@@ -54,6 +59,17 @@ describe('ChatPage', () => {
       'href',
       expect.stringMatching(/^https:\/\/langfuse\.test\/traces\/[0-9a-f]{32}$/),
     );
+  });
+
+  it('hides the trace link from non-admins (tracing backend is admin-only)', async () => {
+    const user = userEvent.setup();
+    await pickEchoAgent(user); // default auth: plain 'user' role
+
+    await user.type(screen.getByLabelText('Message'), 'ping');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    await waitFor(() => expect(screen.getByTestId('task-state')).toHaveTextContent('completed'));
+    expect(screen.queryByRole('link', { name: /trace/i })).not.toBeInTheDocument();
   });
 
   it('shows the A2A error message verbatim on failure', async () => {
