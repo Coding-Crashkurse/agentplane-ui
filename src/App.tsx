@@ -22,8 +22,10 @@ function oidcProps(config: AppConfig): AuthProviderProps {
     authority: config.oidc.issuer,
     client_id: config.oidc.clientId,
     redirect_uri: `${window.location.origin}/callback`,
+    silent_redirect_uri: `${window.location.origin}/callback`,
     post_logout_redirect_uri: `${window.location.origin}/logout`,
     automaticSilentRenew: true,
+    silentRequestTimeoutInSeconds: 10,
     // Tokens stay in memory, never in Web Storage (CLAUDE.md invariant 5).
     userStore: new WebStorageStateStore({ store: new InMemoryWebStorage() }),
     onSigninCallback: () => {

@@ -15,7 +15,7 @@ function unauthenticated(overrides: Partial<AuthContextProps> = {}): AuthContext
 }
 
 describe('RequireAuth', () => {
-  it('shows the public landing without contacting the IdP until Sign in is clicked', async () => {
+  it('tries a silent SSO on load, then falls back to the landing; interactive login only on click', async () => {
     const user = userEvent.setup();
     const auth = unauthenticated();
     renderWithProviders(
@@ -25,12 +25,14 @@ describe('RequireAuth', () => {
       { auth, route: '/registry?kind=agent' },
     );
 
-    // Public area is always visible; no auto-redirect on mount.
-    expect(screen.getByRole('button', { name: /log in/i })).toBeInTheDocument();
+    // Non-interactive session restore is attempted on mount (no prompt).
+    expect(auth.signinSilent).toHaveBeenCalled();
+    // With no session it resolves without authenticating -> public landing.
+    expect(await screen.findByRole('button', { name: /log in/i })).toBeInTheDocument();
     expect(screen.queryByText('protected content')).not.toBeInTheDocument();
     expect(auth.signinRedirect).not.toHaveBeenCalled();
 
-    // Login starts only on click, preserving the target path.
+    // Interactive login starts only on click, preserving the target path.
     await user.click(screen.getByRole('button', { name: /log in/i }));
     expect(auth.signinRedirect).toHaveBeenCalledWith({ state: '/registry?kind=agent' });
   });
@@ -44,7 +46,7 @@ describe('RequireAuth', () => {
     expect(screen.getByText('protected content')).toBeInTheDocument();
   });
 
-  it('shows sign-in errors on the landing page instead of replacing it', () => {
+  it('shows sign-in errors on the landing page instead of replacing it', async () => {
     renderWithProviders(
       <RequireAuth>
         <div>protected content</div>
@@ -55,7 +57,7 @@ describe('RequireAuth', () => {
         }),
       },
     );
-    expect(screen.getByRole('button', { name: /log in/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /log in/i })).toBeInTheDocument();
     expect(screen.getByText(/sign-in failed/i)).toBeInTheDocument();
     expect(screen.getByText('Failed to fetch')).toBeInTheDocument();
   });
