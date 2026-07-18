@@ -191,8 +191,7 @@ export function RegistryPage() {
         <EmptyState
           icon={Boxes}
           title="No entries found"
-          description="Adjust your filters, or register an external agent to get started."
-          action={<Button onClick={() => setRegisterOpen(true)}>Register external agent</Button>}
+          description="Adjust your filters, or use “Register external agent” above to get started."
         />
       ) : (
         <>
