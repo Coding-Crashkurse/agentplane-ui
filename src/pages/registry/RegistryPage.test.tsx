@@ -49,7 +49,7 @@ describe('RegistryPage', () => {
     await user.click(await screen.findByText('Echo Agent'));
 
     const drawer = await screen.findByRole('dialog', { name: 'Echo Agent' });
-    expect(within(drawer).getByTestId('entry-owner')).toHaveTextContent('demo');
+    expect(within(drawer).getByTestId('entry-owner')).toHaveTextContent('Demo Admin');
     expect(within(drawer).getAllByText(/https:\/\/api\.test\/a2a\/echo/).length).toBeGreaterThan(0);
     expect(within(drawer).getByText(/"protocolVersion"/)).toBeInTheDocument();
 

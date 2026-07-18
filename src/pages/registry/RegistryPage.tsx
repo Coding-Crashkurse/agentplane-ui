@@ -4,6 +4,7 @@ import { useEntries } from '../../api/registry/hooks';
 import {
   entryDescription,
   entryName,
+  ownerLabel,
   type EntryKind,
   type EntryStatus,
   type RegistryEntry,
@@ -70,7 +71,11 @@ const COLUMNS: Column<RegistryEntry>[] = [
   {
     key: 'owner',
     header: 'Owner',
-    render: (entry) => <span className="text-sm text-muted">{entry.owner}</span>,
+    render: (entry) => (
+      <span className="text-sm text-muted" title={entry.owner}>
+        {ownerLabel(entry)}
+      </span>
+    ),
   },
   {
     key: 'updated',

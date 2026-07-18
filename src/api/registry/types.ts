@@ -19,8 +19,10 @@ export interface RegistryEntry {
   tags: string[];
   /** Public gateway URL: this IS the A2A endpoint for `kind: agent`. */
   url: string;
-  /** Owner subject (OIDC `sub`). */
+  /** Owner subject (OIDC `sub`) — the authorization key. */
   owner: string;
+  /** Display name of the owner (denormalized at registration; may be empty). */
+  owner_name: string;
   group: string;
   last_seen: string | null;
   created_at: string;
@@ -33,6 +35,11 @@ export interface RegistryEntry {
 export function entryName(entry: RegistryEntry): string {
   const name = entry.card['name'];
   return typeof name === 'string' && name ? name : entry.id;
+}
+
+/** Human-readable owner: display name when known, else the subject. */
+export function ownerLabel(entry: RegistryEntry): string {
+  return entry.owner_name || entry.owner;
 }
 
 /** Display description of an entry (from the card; may be empty). */

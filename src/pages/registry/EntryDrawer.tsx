@@ -5,6 +5,7 @@ import { useRegistryClient } from '../../api/registry/hooks';
 import {
   entryDescription,
   entryName,
+  ownerLabel,
   type RegistryEntry,
 } from '../../api/registry/types';
 import { useIsAdmin, useSubject } from '../../auth';
@@ -125,8 +126,9 @@ export function EntryDrawer({
 
         <Section label="Owner">
           <p data-testid="entry-owner" className="text-sm text-ink">
-            {entry.owner}
+            {ownerLabel(entry)}
           </p>
+          {entry.owner_name && <p className="break-all text-xs text-muted">{entry.owner}</p>}
         </Section>
 
         <Section label="History">
