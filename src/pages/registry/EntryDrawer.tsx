@@ -15,6 +15,7 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { StatusBadge } from '../../components/StatusBadge';
 import { Tag } from '../../components/Tag';
 import { useToast } from '../../components/Toast';
+import { StatusTimeline } from './StatusTimeline';
 import { TagFilterInput } from './TagFilterInput';
 
 interface CardSkill {
@@ -126,6 +127,10 @@ export function EntryDrawer({
           <p data-testid="entry-owner" className="text-sm text-ink">
             {entry.owner}
           </p>
+        </Section>
+
+        <Section label="History">
+          <StatusTimeline entryId={entry.id} />
         </Section>
 
         {skills.length > 0 && (

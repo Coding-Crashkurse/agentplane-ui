@@ -5,6 +5,7 @@ import type {
   ListParams,
   ListResult,
   RegistryEntry,
+  StatusHistory,
 } from './types';
 
 export class ApiError extends Error {
@@ -135,6 +136,14 @@ export class RegistryClient {
       method: 'DELETE',
     });
     if (!response.ok) throw await errorFromResponse(response);
+  }
+
+  async history(id: string, hours = 24): Promise<StatusHistory> {
+    const sp = new URLSearchParams({ hours: String(hours) });
+    const response = await this.fetchFn(this.url(`/agents/${encodeURIComponent(id)}/history`, sp), {
+      headers: { Accept: 'application/json' },
+    });
+    return this.json<StatusHistory>(response);
   }
 
   async capabilities(): Promise<Capabilities> {

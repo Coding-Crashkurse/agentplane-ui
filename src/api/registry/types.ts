@@ -48,6 +48,21 @@ export interface EntryListResponse {
   offset: number;
 }
 
+export interface StatusEvent {
+  status: EntryStatus;
+  at: string;
+}
+
+/**
+ * Status transitions within a window; the first item may predate the window
+ * (the state in effect at its start).
+ */
+export interface StatusHistory {
+  items: StatusEvent[];
+  window_h: number;
+  retention_h: number;
+}
+
 export interface Capabilities {
   semantic_search: boolean;
 }

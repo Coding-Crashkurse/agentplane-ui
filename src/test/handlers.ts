@@ -23,6 +23,13 @@ export const defaultHandlers = [
     );
     return HttpResponse.json({ ...entriesPage, items, total: items.length });
   }),
+  http.get(`${REGISTRY_URL}/agents/:id/history`, () =>
+    HttpResponse.json({
+      items: [{ status: 'healthy', at: '2026-07-12T09:00:00Z' }],
+      window_h: 24,
+      retention_h: 168,
+    }),
+  ),
   http.get(`${REGISTRY_URL}/capabilities`, () => HttpResponse.json(capabilitiesFixture)),
   http.post(ECHO_AGENT_URL, () => sseResponse(sseBody(echoStreamFrames(['Hello', ' world'])))),
 ];
