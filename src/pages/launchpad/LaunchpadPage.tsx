@@ -33,8 +33,11 @@ function TileCard({
 
 function Tile({ link }: { link: LaunchpadLink }) {
   return (
-    // External modules open in the same tab: shared SSO session (SPEC §4.1).
-    <a href={link.url} className="block">
+    // External modules (builder, traces, admin console) open in a new tab so
+    // the launchpad stays available as the hub — there is otherwise no way back
+    // from a separate app. The SSO session is browser-wide, so it is shared
+    // across tabs regardless (SPEC §4.1).
+    <a href={link.url} target="_blank" rel="noopener noreferrer" className="block">
       <TileCard
         icon={tileIcon(link.icon)}
         name={link.name}
