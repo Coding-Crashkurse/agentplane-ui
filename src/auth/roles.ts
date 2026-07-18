@@ -34,3 +34,9 @@ export function useUsername(): string | undefined {
   const profile = auth.user?.profile;
   return profile?.preferred_username ?? profile?.name ?? profile?.sub;
 }
+
+/** OIDC subject: what the platform records as `owner` on registry entries. */
+export function useSubject(): string | undefined {
+  const auth = useAuth();
+  return auth.user?.profile?.sub;
+}

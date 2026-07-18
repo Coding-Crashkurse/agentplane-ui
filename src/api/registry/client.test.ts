@@ -29,8 +29,8 @@ describe('RegistryClient', () => {
     expect(params.get('status')).toBe('healthy');
     expect(params.get('tags')).toBe('nlp,text');
     expect(params.get('owner')).toBe('all');
-    expect(params.get('page')).toBe('2');
-    expect(params.get('page_size')).toBe('50');
+    expect(params.get('limit')).toBe('50');
+    expect(params.get('offset')).toBe('50');
   });
 
   it('surfaces the X-Degraded header from search responses', async () => {
@@ -53,7 +53,7 @@ describe('RegistryClient', () => {
         ),
       ),
     );
-    const failure = client.register('http://10.0.0.1/internal');
+    const failure = client.register('http://10.0.0.1/internal', { name: 'internal' });
     await expect(failure).rejects.toThrowError(ApiError);
     await expect(failure).rejects.toThrowError('URL must be a public gateway URL');
   });

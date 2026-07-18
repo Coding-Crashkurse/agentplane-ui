@@ -1,7 +1,11 @@
 import { Bot, Search } from 'lucide-react';
 import { useId, useState } from 'react';
 import { useCapabilities, useEntries } from '../../api/registry/hooks';
-import type { RegistryEntry } from '../../api/registry/types';
+import {
+  entryDescription,
+  entryName,
+  type RegistryEntry,
+} from '../../api/registry/types';
 import { EmptyState } from '../../components/EmptyState';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { Spinner } from '../../components/Spinner';
@@ -30,6 +34,7 @@ export function AgentPicker({
     semantic: semantic && capabilities.semantic_search ? true : undefined,
     kind: 'agent',
     status: includeOthers ? undefined : 'healthy',
+    enabled: true,
     page_size: 50,
   });
 
@@ -119,11 +124,13 @@ export function AgentPicker({
                   )}
                 >
                   <span className="flex items-center justify-between gap-2">
-                    <span className="truncate text-sm font-medium text-ink">{entry.name}</span>
+                    <span className="truncate text-sm font-medium text-ink">
+                      {entryName(entry)}
+                    </span>
                     <StatusBadge status={entry.status} lastSeen={entry.last_seen} />
                   </span>
                   <span className="mt-0.5 block truncate text-xs text-muted">
-                    {entry.description}
+                    {entryDescription(entry)}
                   </span>
                 </button>
               </li>

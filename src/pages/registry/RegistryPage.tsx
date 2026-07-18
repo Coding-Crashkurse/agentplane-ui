@@ -1,7 +1,13 @@
 import { Boxes, Plus, Search } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import { useEntries } from '../../api/registry/hooks';
-import type { EntryKind, EntryStatus, RegistryEntry } from '../../api/registry/types';
+import {
+  entryDescription,
+  entryName,
+  type EntryKind,
+  type EntryStatus,
+  type RegistryEntry,
+} from '../../api/registry/types';
 import { useIsAdmin } from '../../auth';
 import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
@@ -25,8 +31,10 @@ const COLUMNS: Column<RegistryEntry>[] = [
     header: 'Name',
     render: (entry) => (
       <div className="min-w-48">
-        <p className="font-medium text-ink">{entry.name}</p>
-        <p className="max-w-md truncate text-xs text-muted">{entry.description}</p>
+        <p className={entry.enabled ? 'font-medium text-ink' : 'font-medium text-muted'}>
+          {entryName(entry)}
+        </p>
+        <p className="max-w-md truncate text-xs text-muted">{entryDescription(entry)}</p>
       </div>
     ),
   },
@@ -40,7 +48,12 @@ const COLUMNS: Column<RegistryEntry>[] = [
   {
     key: 'status',
     header: 'Status',
-    render: (entry) => <StatusBadge status={entry.status} lastSeen={entry.last_seen} />,
+    render: (entry) =>
+      entry.enabled ? (
+        <StatusBadge status={entry.status} lastSeen={entry.last_seen} />
+      ) : (
+        <Badge tone="slate">disabled</Badge>
+      ),
   },
   {
     key: 'tags',
@@ -79,6 +92,7 @@ export function RegistryPage() {
   const [tags, setTags] = useState<string[]>([]);
   const [kind, setKind] = useState<'' | EntryKind>('');
   const [status, setStatus] = useState<'' | EntryStatus>('');
+  const [enabledFilter, setEnabledFilter] = useState<'' | 'enabled' | 'disabled'>('');
   const [allOwners, setAllOwners] = useState(false);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<RegistryEntry | null>(null);
@@ -88,13 +102,14 @@ export function RegistryPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedQuery, tags, kind, status, allOwners]);
+  }, [debouncedQuery, tags, kind, status, enabledFilter, allOwners]);
 
   const { data, isPending, isError, error, refetch } = useEntries({
     q: debouncedQuery || undefined,
     tags: tags.length > 0 ? tags : undefined,
     kind: kind || undefined,
     status: status || undefined,
+    enabled: enabledFilter ? enabledFilter === 'enabled' : undefined,
     owner: allOwners ? 'all' : undefined,
     page,
     page_size: PAGE_SIZE,
@@ -153,6 +168,17 @@ export function RegistryPage() {
           <option value="unhealthy">Unhealthy</option>
           <option value="unknown">Unknown</option>
         </Select>
+        <Select
+          aria-label="Filter by enabled state"
+          value={enabledFilter}
+          onChange={(event) =>
+            setEnabledFilter(event.target.value as '' | 'enabled' | 'disabled')
+          }
+        >
+          <option value="">Enabled and disabled</option>
+          <option value="enabled">Enabled only</option>
+          <option value="disabled">Disabled only</option>
+        </Select>
         {isAdmin && (
           <label htmlFor={allOwnersId} className="flex items-center gap-1.5 text-sm text-muted">
             <input
@@ -203,7 +229,7 @@ export function RegistryPage() {
           />
           <div className="flex items-center justify-between text-sm text-muted">
             <span>
-              Page {data.data.page} of {totalPages} · {data.data.total} entries
+              Page {page} of {totalPages} · {data.data.total} entries
             </span>
             <div className="flex gap-2">
               <Button

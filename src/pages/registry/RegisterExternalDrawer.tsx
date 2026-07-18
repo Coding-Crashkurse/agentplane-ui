@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { JsonRpcA2AClient, type AgentCard } from '../../api/a2a';
 import { useRegistryClient } from '../../api/registry/hooks';
+import { entryName } from '../../api/registry/types';
 import { useAuthorizedFetch } from '../../auth';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -42,9 +43,10 @@ export function RegisterExternalDrawer({ open, onClose }: { open: boolean; onClo
   });
 
   const register = useMutation({
-    mutationFn: () => registry.register(url.trim()),
+    mutationFn: () =>
+      registry.register(url.trim(), card as unknown as Record<string, unknown>),
     onSuccess: (entry) => {
-      toast('success', `"${entry.name}" was registered.`);
+      toast('success', `"${entryName(entry)}" was registered.`);
       void queryClient.invalidateQueries({ queryKey: ['entries'] });
       close();
     },

@@ -2,8 +2,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Copy } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useRegistryClient } from '../../api/registry/hooks';
-import type { RegistryEntry } from '../../api/registry/types';
-import { useIsAdmin, useUsername } from '../../auth';
+import {
+  entryDescription,
+  entryName,
+  type RegistryEntry,
+} from '../../api/registry/types';
+import { useIsAdmin, useSubject } from '../../auth';
 import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { Drawer } from '../../components/Drawer';
@@ -46,7 +50,7 @@ export function EntryDrawer({
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const isAdmin = useIsAdmin();
-  const username = useUsername();
+  const subject = useSubject();
   const [tags, setTags] = useState<string[]>([]);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
@@ -55,7 +59,7 @@ export function EntryDrawer({
     setConfirmingDelete(false);
   }, [entry]);
 
-  const canEdit = entry !== null && (isAdmin || entry.owner === username);
+  const canEdit = entry !== null && (isAdmin || entry.owner === subject);
   const tagsChanged =
     entry !== null &&
     (tags.length !== entry.tags.length || tags.some((tag) => !entry.tags.includes(tag)));
@@ -73,7 +77,16 @@ export function EntryDrawer({
   const remove = useMutation({
     mutationFn: () => client.remove(entry!.id),
     onSuccess: () => {
-      toast('success', `"${entry!.name}" was deleted.`);
+      toast('success', `"${entryName(entry!)}" was deleted.`);
+      void invalidate();
+      onClose();
+    },
+  });
+
+  const toggleEnabled = useMutation({
+    mutationFn: () => client.setEnabled(entry!.id, !entry!.enabled),
+    onSuccess: (updated) => {
+      toast('success', updated.enabled ? 'Entry enabled.' : 'Entry disabled.');
       void invalidate();
       onClose();
     },
@@ -90,14 +103,18 @@ export function EntryDrawer({
   const skills = skillsOf(entry.card);
 
   return (
-    <Drawer open onClose={onClose} title={entry.name}>
+    <Drawer open onClose={onClose} title={entryName(entry)}>
       <div className="flex flex-col gap-6">
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone="blue">{entry.kind === 'mcp_server' ? 'MCP server' : 'agent'}</Badge>
-          <StatusBadge status={entry.status} lastSeen={entry.last_seen} />
+          {entry.enabled ? (
+            <StatusBadge status={entry.status} lastSeen={entry.last_seen} />
+          ) : (
+            <Badge tone="slate">disabled</Badge>
+          )}
         </div>
 
-        <p className="text-sm leading-relaxed text-muted">{entry.description}</p>
+        <p className="text-sm leading-relaxed text-muted">{entryDescription(entry)}</p>
 
         <Section label="URL">
           <code className="break-all rounded-control bg-surface px-2 py-1 text-xs text-ink">
@@ -175,6 +192,38 @@ export function EntryDrawer({
         </Section>
 
         {canEdit && (
+          <Section label="Availability">
+            <div className="flex items-center gap-3">
+              <p className="flex-1 text-sm text-muted">
+                {entry.enabled
+                  ? 'Disabling hides the entry from discovery and pauses health checks; it stays listed here.'
+                  : 'This entry is disabled: hidden from discovery, not health-checked.'}
+              </p>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={toggleEnabled.isPending}
+                onClick={() => toggleEnabled.mutate()}
+              >
+                {toggleEnabled.isPending
+                  ? 'Saving…'
+                  : entry.enabled
+                    ? 'Disable entry'
+                    : 'Enable entry'}
+              </Button>
+            </div>
+            {toggleEnabled.isError && (
+              <ErrorNotice
+                title="Change failed"
+                detail={
+                  toggleEnabled.error instanceof Error ? toggleEnabled.error.message : undefined
+                }
+              />
+            )}
+          </Section>
+        )}
+
+        {canEdit && (
           <Section label="Danger zone">
             {remove.isError && (
               <ErrorNotice
@@ -185,7 +234,7 @@ export function EntryDrawer({
             {confirmingDelete ? (
               <div className="flex items-center gap-2">
                 <p className="flex-1 text-sm text-ink">
-                  Delete “{entry.name}”? This cannot be undone.
+                  Delete “{entryName(entry)}”? This cannot be undone.
                 </p>
                 <Button
                   variant="danger"

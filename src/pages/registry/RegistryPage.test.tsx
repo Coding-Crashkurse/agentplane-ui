@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
+import { echoAgent, entriesPage } from '../../api/registry/__fixtures__/entries';
 import { REGISTRY_URL } from '../../test/handlers';
 import { server } from '../../test/server';
 import { makeAuth, renderWithProviders } from '../../test/utils';
@@ -87,5 +88,30 @@ describe('RegistryPage', () => {
 
     await user.click(within(drawer).getByRole('button', { name: /register agent/i }));
     expect(await within(drawer).findByText('Private URLs are not allowed')).toBeInTheDocument();
+  });
+
+  it('shows a disabled badge and re-enables via the drawer toggle', async () => {
+    const user = userEvent.setup();
+    const disabledEntry = { ...echoAgent, enabled: false };
+    let putBody: unknown;
+    server.use(
+      http.get(`${REGISTRY_URL}/agents`, () =>
+        HttpResponse.json({ ...entriesPage, items: [disabledEntry], total: 1 }),
+      ),
+      http.put(`${REGISTRY_URL}/agents/echo-1`, async ({ request }) => {
+        putBody = await request.json();
+        return HttpResponse.json({ ...disabledEntry, enabled: true, status: 'starting' });
+      }),
+    );
+
+    renderWithProviders(<RegistryPage />, { auth: makeAuth({ username: 'demo' }) });
+    const row = (await screen.findByText('Echo Agent')).closest('tr')!;
+    expect(within(row).getByText('disabled')).toBeInTheDocument();
+
+    await user.click(screen.getByText('Echo Agent'));
+    const drawer = await screen.findByRole('dialog', { name: 'Echo Agent' });
+    await user.click(within(drawer).getByRole('button', { name: /enable entry/i }));
+
+    await waitFor(() => expect(putBody).toEqual({ enabled: true }));
   });
 });

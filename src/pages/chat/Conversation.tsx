@@ -2,7 +2,7 @@ import { ExternalLink, MessageSquare, SendHorizonal } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { FINAL_TASK_STATES } from '../../api/a2a';
 import { useIsAdmin } from '../../auth';
-import type { RegistryEntry } from '../../api/registry/types';
+import { entryName, type RegistryEntry } from '../../api/registry/types';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -135,7 +135,7 @@ export function Conversation({
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-3 border-b border-border px-5 py-3">
-        <h2 className="text-base font-semibold text-ink">{agent.name}</h2>
+        <h2 className="text-base font-semibold text-ink">{entryName(agent)}</h2>
         <StatusBadge status={agent.status} lastSeen={agent.last_seen} />
       </div>
 
@@ -144,7 +144,7 @@ export function Conversation({
           <EmptyState
             icon={MessageSquare}
             title="No messages yet"
-            description={`Say something to ${agent.name}: replies stream in live.`}
+            description={`Say something to ${entryName(agent)}: replies stream in live.`}
           />
         ) : (
           <div className="flex flex-col gap-4">
@@ -163,7 +163,7 @@ export function Conversation({
       <form onSubmit={submit} className="flex items-center gap-2 border-t border-border px-5 py-3">
         <input
           aria-label="Message"
-          placeholder={`Message ${agent.name}…`}
+          placeholder={`Message ${entryName(agent)}…`}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           className="h-10 flex-1 rounded-control border border-border bg-card px-3 text-sm placeholder:text-muted focus:border-accent focus:outline-none"

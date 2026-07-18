@@ -23,10 +23,12 @@ function toSearchParams(params: ListParams): URLSearchParams {
   if (params.semantic) sp.set('semantic', 'true');
   if (params.kind) sp.set('kind', params.kind);
   if (params.status) sp.set('status', params.status);
+  if (params.enabled !== undefined) sp.set('enabled', String(params.enabled));
   if (params.tags && params.tags.length > 0) sp.set('tags', params.tags.join(','));
   if (params.owner) sp.set('owner', params.owner);
-  if (params.page) sp.set('page', String(params.page));
-  if (params.page_size) sp.set('page_size', String(params.page_size));
+  const pageSize = params.page_size ?? 50;
+  if (params.page_size) sp.set('limit', String(pageSize));
+  if (params.page && params.page > 1) sp.set('offset', String((params.page - 1) * pageSize));
   return sp;
 }
 
@@ -71,8 +73,8 @@ export class RegistryClient {
     return (await response.json()) as T;
   }
 
-  private async listAt(path: string, params: ListParams): Promise<ListResult> {
-    const response = await this.fetchFn(this.url(path, toSearchParams(params)), {
+  private async listWith(path: string, sp: URLSearchParams): Promise<ListResult> {
+    const response = await this.fetchFn(this.url(path, sp), {
       headers: { Accept: 'application/json' },
     });
     return {
@@ -82,11 +84,15 @@ export class RegistryClient {
   }
 
   list(params: ListParams = {}): Promise<ListResult> {
-    return this.listAt('/agents', params);
+    return this.listWith('/agents', toSearchParams(params));
   }
 
   search(params: ListParams): Promise<ListResult> {
-    return this.listAt('/agents/search', params);
+    // Management view: include disabled entries (discovery defaults to hiding
+    // them server-side; visibility itself stays enforced by the API).
+    const sp = toSearchParams(params);
+    sp.set('include_disabled', 'true');
+    return this.listWith('/agents/search', sp);
   }
 
   async get(id: string): Promise<RegistryEntry> {
@@ -96,23 +102,32 @@ export class RegistryClient {
     return this.json<RegistryEntry>(response);
   }
 
-  /** Register an external agent by its gateway URL (SPEC §4.3). */
-  async register(url: string): Promise<RegistryEntry> {
+  /** Register an external agent: gateway URL + its fetched card (SPEC §4.3). */
+  async register(url: string, card: Record<string, unknown>): Promise<RegistryEntry> {
     const response = await this.fetchFn(this.url('/agents'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ url }),
+      body: JSON.stringify({ kind: 'agent', card, url }),
     });
     return this.json<RegistryEntry>(response);
   }
 
-  async updateTags(id: string, tags: string[]): Promise<RegistryEntry> {
+  private async patch(id: string, body: Record<string, unknown>): Promise<RegistryEntry> {
     const response = await this.fetchFn(this.url(`/agents/${encodeURIComponent(id)}`), {
-      method: 'PATCH',
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ tags }),
+      body: JSON.stringify(body),
     });
     return this.json<RegistryEntry>(response);
+  }
+
+  updateTags(id: string, tags: string[]): Promise<RegistryEntry> {
+    return this.patch(id, { tags });
+  }
+
+  /** Soft-disable / re-enable an entry (kept listed; hidden from discovery). */
+  setEnabled(id: string, enabled: boolean): Promise<RegistryEntry> {
+    return this.patch(id, { enabled });
   }
 
   async remove(id: string): Promise<void> {

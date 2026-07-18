@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import { echoStreamFrames, sseBody } from '../api/a2a/__fixtures__/stream';
 import { capabilitiesFixture, entriesPage } from '../api/registry/__fixtures__/entries';
+import { entryDescription, entryName } from '../api/registry/types';
 
 export const REGISTRY_URL = 'https://api.test/registry';
 export const ECHO_AGENT_URL = 'https://api.test/a2a/echo';
@@ -17,7 +18,8 @@ export const defaultHandlers = [
     const q = new URL(request.url).searchParams.get('q')?.toLowerCase() ?? '';
     const items = entriesPage.items.filter(
       (entry) =>
-        entry.name.toLowerCase().includes(q) || entry.description.toLowerCase().includes(q),
+        entryName(entry).toLowerCase().includes(q) ||
+        entryDescription(entry).toLowerCase().includes(q),
     );
     return HttpResponse.json({ ...entriesPage, items, total: items.length });
   }),

@@ -47,7 +47,9 @@ export function makeAuth({ roles = ['user'], username = 'demo' }: MockAuthOption
     expired: false,
     state: undefined,
     profile: {
-      sub: 'user-1',
+      // The platform records the OIDC subject as `owner`; tests use the
+      // username as subject so ownership checks line up with fixtures.
+      sub: username,
       preferred_username: username,
       name: 'Demo User',
       realm_access: { roles },

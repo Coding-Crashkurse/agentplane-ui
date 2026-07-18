@@ -7,13 +7,13 @@ import type { Capabilities, EntryListResponse, RegistryEntry } from '../types';
 
 export const echoAgent: RegistryEntry = {
   id: 'echo-1',
-  name: 'Echo Agent',
-  description: 'Echoes back whatever you send: the platform smoke-test agent.',
   kind: 'agent',
   status: 'healthy',
+  enabled: true,
   tags: ['demo', 'echo'],
   url: 'https://api.test/a2a/echo',
   owner: 'demo',
+  group: '',
   last_seen: '2026-07-12T10:00:00Z',
   created_at: '2026-07-01T09:00:00Z',
   updated_at: '2026-07-10T09:00:00Z',
@@ -30,13 +30,13 @@ export const echoAgent: RegistryEntry = {
 
 export const summarizerAgent: RegistryEntry = {
   id: 'summarizer-1',
-  name: 'Summarizer',
-  description: 'Summarizes documents and long text.',
   kind: 'agent',
   status: 'healthy',
+  enabled: true,
   tags: ['nlp', 'text'],
   url: 'https://api.test/a2a/summarizer',
   owner: 'demo',
+  group: '',
   last_seen: '2026-07-12T09:58:00Z',
   created_at: '2026-06-20T09:00:00Z',
   updated_at: '2026-07-11T09:00:00Z',
@@ -51,13 +51,13 @@ export const summarizerAgent: RegistryEntry = {
 
 export const scraperAgent: RegistryEntry = {
   id: 'scraper-1',
-  name: 'Web Scraper',
-  description: 'Fetches and extracts content from web pages.',
   kind: 'agent',
   status: 'unhealthy',
+  enabled: true,
   tags: ['web'],
   url: 'https://api.test/a2a/scraper',
   owner: 'alice',
+  group: '',
   last_seen: '2026-07-10T08:00:00Z',
   created_at: '2026-06-01T09:00:00Z',
   updated_at: '2026-07-10T08:00:00Z',
@@ -72,24 +72,24 @@ export const scraperAgent: RegistryEntry = {
 
 export const searchMcpServer: RegistryEntry = {
   id: 'mcp-search-1',
-  name: 'Search MCP Server',
-  description: 'MCP server exposing web search tools.',
   kind: 'mcp_server',
   status: 'starting',
+  enabled: true,
   tags: ['mcp', 'search'],
   url: 'https://api.test/mcp/search',
   owner: 'alice',
+  group: '',
   last_seen: null,
   created_at: '2026-07-12T09:00:00Z',
   updated_at: '2026-07-12T09:00:00Z',
-  card: { name: 'Search MCP Server', tools: ['web_search'] },
+  card: { name: 'Search MCP Server', description: 'MCP server exposing web search tools.', tools: ['web_search'] },
 };
 
 export const entriesPage: EntryListResponse = {
   items: [echoAgent, summarizerAgent, scraperAgent, searchMcpServer],
   total: 4,
-  page: 1,
-  page_size: 50,
+  limit: 50,
+  offset: 0,
 };
 
 export const capabilitiesFixture: Capabilities = { semantic_search: true };
