@@ -139,7 +139,7 @@ function artifactFromWire(artifact: WireArtifact | undefined): Artifact {
   };
 }
 
-function taskFromWire(task: WireTask): Task {
+export function taskFromWire(task: WireTask): Task {
   return {
     kind: 'task',
     id: task.id ?? '',

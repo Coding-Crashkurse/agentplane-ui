@@ -7,10 +7,12 @@ import type { AgentCard, A2AMessage, StreamEvent, Task } from './types';
 import {
   messageToWire,
   streamEventFromWire,
+  taskFromWire,
   taskOrMessageFromWire,
   type WireMessage,
   type WireSendMessageResponse,
   type WireStreamResponse,
+  type WireTask,
 } from './wire';
 
 interface JsonRpcError {
@@ -126,6 +128,30 @@ export class JsonRpcA2AClient implements A2AClient {
       const event = streamEventFromWire(unwrap(parsed) as WireStreamResponse);
       if (event) yield event;
     }
+  }
+
+  async listTasks(agentUrl: string, options?: SendOptions): Promise<Task[]> {
+    const traceparent = options?.traceparent ?? newTraceparent().header;
+    const response = await this.fetchFn(agentUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'A2A-Version': A2A_VERSION,
+        traceparent,
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: randomId(),
+        method: 'ListTasks',
+        params: { pageSize: 50, historyLength: 100, includeArtifacts: true },
+      }),
+      signal: options?.signal,
+    });
+    if (!response.ok) throw await this.httpError(response);
+    const body = (await response.json()) as JsonRpcResponse;
+    const result = unwrap(body) as { tasks?: WireTask[] };
+    return (result.tasks ?? []).map(taskFromWire);
   }
 
   private async httpError(response: Response): Promise<A2AError> {

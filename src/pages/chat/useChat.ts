@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { JsonRpcA2AClient, newTraceparent, textFromParts, type TaskState } from '../../api/a2a';
+import {
+  JsonRpcA2AClient,
+  newTraceparent,
+  textFromParts,
+  type Task,
+  type TaskState,
+} from '../../api/a2a';
 import type { RegistryEntry } from '../../api/registry/types';
 import { useAuthorizedFetch } from '../../auth';
 import { randomId } from '../../lib/randomId';
@@ -16,9 +22,36 @@ export interface ChatMessage {
   streaming: boolean;
 }
 
+/** Restored view of one persisted task: the user turn(s) and the reply. */
+function taskToMessages(task: Task): ChatMessage[] {
+  const restored: ChatMessage[] = [];
+  for (const message of task.history ?? []) {
+    if (message.role === 'user') {
+      restored.push({
+        id: message.messageId || randomId(),
+        role: 'user',
+        text: textFromParts(message.parts),
+        streaming: false,
+      });
+    }
+  }
+  const failed = task.status.state === 'failed';
+  restored.push({
+    id: `restored-${task.id}`,
+    role: 'agent',
+    text: (task.artifacts ?? []).map((artifact) => textFromParts(artifact.parts)).join(''),
+    taskState: task.status.state,
+    error: failed ? textFromParts(task.status.message?.parts) || 'Task failed.' : undefined,
+    streaming: false,
+  });
+  return restored;
+}
+
 /**
- * Session-local conversation state (in-memory only, v1: SPEC §4.2).
- * Streams via A2A `message/stream` to the entry's stored gateway URL.
+ * Conversation state (SPEC §4.2). Streams via A2A to the entry's stored
+ * gateway URL. When the runtime persists tasks (TASK_STORE=database), the
+ * history is restored via A2A `ListTasks` on agent selection — best-effort:
+ * agents without task persistence simply start empty.
  */
 export function useChat(agent: RegistryEntry | null) {
   const fetchFn = useAuthorizedFetch();
@@ -26,12 +59,30 @@ export function useChat(agent: RegistryEntry | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const contextIdRef = useRef<string | undefined>(undefined);
-  const agentId = agent?.id;
+  // Keyed on the stable URL, not the entry object: registry refetches create
+  // new objects for the same agent and must not wipe a running conversation.
+  const agentUrl = agent?.url;
 
   useEffect(() => {
     setMessages([]);
     contextIdRef.current = undefined;
-  }, [agentId]);
+    if (!agentUrl) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const tasks = await client.listTasks(agentUrl);
+        if (cancelled || tasks.length === 0) return;
+        const ordered = [...tasks].reverse(); // server lists newest first
+        contextIdRef.current = ordered.at(-1)?.contextId;
+        setMessages(ordered.flatMap(taskToMessages));
+      } catch {
+        /* restore is best-effort */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [agentUrl, client]);
 
   const send = useCallback(
     async (text: string) => {

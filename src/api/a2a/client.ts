@@ -40,4 +40,6 @@ export interface A2AClient {
     message: OutgoingMessage,
     options?: SendOptions,
   ): AsyncGenerator<StreamEvent, void, undefined>;
+  /** Recent tasks (newest first) for history restore; [] when unsupported. */
+  listTasks(agentUrl: string, options?: SendOptions): Promise<Task[]>;
 }

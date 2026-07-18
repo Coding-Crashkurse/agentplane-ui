@@ -37,5 +37,11 @@ export const defaultHandlers = [
     }),
   ),
   http.get(`${REGISTRY_URL}/capabilities`, () => HttpResponse.json(capabilitiesFixture)),
-  http.post(ECHO_AGENT_URL, () => sseResponse(sseBody(echoStreamFrames(['Hello', ' world'])))),
+  http.post(ECHO_AGENT_URL, async ({ request }) => {
+    const { method } = (await request.json()) as { method?: string };
+    if (method === 'ListTasks') {
+      return HttpResponse.json({ jsonrpc: '2.0', id: 1, result: { tasks: [] } });
+    }
+    return sseResponse(sseBody(echoStreamFrames(['Hello', ' world'])));
+  }),
 ];

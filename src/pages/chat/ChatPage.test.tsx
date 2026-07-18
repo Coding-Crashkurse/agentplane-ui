@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { Route, Routes } from 'react-router';
 import { describe, expect, it } from 'vitest';
-import { sseErrorBody } from '../../api/a2a/__fixtures__/stream';
+import { echoStreamFrames, sseBody, sseErrorBody } from '../../api/a2a/__fixtures__/stream';
 import { entriesPage } from '../../api/registry/__fixtures__/entries';
 import { ECHO_AGENT_URL, REGISTRY_URL, sseResponse } from '../../test/handlers';
 import { server } from '../../test/server';
@@ -34,6 +34,37 @@ describe('ChatPage', () => {
   it('restores the selected agent from the URL (deep link, survives reloads)', async () => {
     renderChat({ route: '/chat/echo-1' });
     expect(await screen.findByRole('heading', { name: 'Echo Agent' })).toBeInTheDocument();
+  });
+
+  it('restores the persisted conversation via ListTasks on selection', async () => {
+    server.use(
+      http.post(ECHO_AGENT_URL, async ({ request }) => {
+        const { method } = (await request.json()) as { method?: string };
+        if (method !== 'ListTasks') return sseResponse(sseBody(echoStreamFrames(['ok'])));
+        return HttpResponse.json({
+          jsonrpc: '2.0',
+          id: 1,
+          result: {
+            tasks: [
+              {
+                id: 'task-9',
+                contextId: 'ctx-9',
+                status: { state: 'TASK_STATE_COMPLETED' },
+                history: [
+                  { messageId: 'u1', role: 'ROLE_USER', parts: [{ text: 'earlier question' }] },
+                ],
+                artifacts: [{ artifactId: 'a1', name: 'output', parts: [{ text: 'earlier answer' }] }],
+              },
+            ],
+          },
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    await pickEchoAgent(user);
+
+    expect(await screen.findByText('earlier question')).toBeInTheDocument();
+    expect(screen.getByText('earlier answer')).toBeInTheDocument();
   });
 
   it('streams the reply tokens in order and shows the final task state', async () => {
